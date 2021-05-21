@@ -14,6 +14,8 @@ const routes = require('./routes/index');
 
 const app = express();
 
+const path = require('path');
+
 app.use(cors({ origin: '*', methods: 'GET,HEAD,PUT,PATCH,POST,DELETE' }));
 app.use(routes);
 
@@ -21,7 +23,31 @@ const server = http.createServer(app);
 
 const io = socketIo(server);
 
-const CHANNELS = ['CHANNEL ONE', 'CHANNEL TWO'];
+var sqlite3 = require('sqlite3').verbose();
+// var db = new sqlite3.Database(':memory:');
+var db = new sqlite3.Database(path.join(__dirname, 'db.sqlite3'));
+
+// db.serialize(function () {
+db.run(
+  'CREATE TABLE IF NOT EXISTS charts (source TEXT, destination TEXT, content TEXT) '
+);
+
+const getAllMessage = ({ source, destination }) => {
+  return new Promise((resolve, reject) => {
+    const data = [];
+    db.all(
+      `SELECT * FROM charts where destination IN(${destination},${source}) AND source  IN (${source},${destination})`,
+      (err, rows) => {
+        data.push(rows);
+      },
+      (r, n) => {
+        resolve(n);
+      }
+    );
+  });
+};
+
+// });
 
 // socker middleware
 // io.use((socket, next) => {
@@ -31,54 +57,42 @@ const CHANNELS = ['CHANNEL ONE', 'CHANNEL TWO'];
 //   next(err);
 // });
 
-function updatedCache(id, key, value) {
-  return new Promise((resv, rej) => {
-    // value = JSON.stringify(value);
-    client.hset(id, key, value, (err, res) => {
-      resv(1);
-    });
-  });
-}
-
-function getAll(id) {
-  return new Promise((resv, rej) => {
-    client.hgetall(id, (err, res) => {
-      console.log({ res: res });
-      resv(res);
-    });
-  });
-}
-
-getAll(1).then((d) => console.log({ test: JSON.parse(d) }));
-
 let interval;
 io.on('connection', (socket) => {
   console.log('New client connected');
 
-  socket.on('channel-join', async (id) => {
-    console.log('channel-join', id);
+  socket.on('channel-join', async ({ source, destination }) => {
+    console.log('channel-join', { source, destination });
 
     // general welcome
-    socket.emit('message', 'Sahmwanga Messages are limited to this room ' + id);
+    // socket.emit('message', 'Sahmwanga Messages are limited to this room ' + id);
 
     // get all message for the selected channel
-    const messages = await getAll(id);
+    const messages = await getAllMessage({ source, destination });
+    // console.log(messages);
     socket.emit('channel-join', {
-      channel_id: id,
+      source,
+      destination,
       message: messages,
     });
 
     // broadcast everytime users connect
-    socket.broadcast.to(id).emit('message', 'Sahmwanga has joined the room');
+    // socket.broadcast.to(id).emit('message', 'Sahmwanga has joined the room');
   });
 
-  socket.on('send-message', async (message) => {
+  socket.on('message', async (message) => {
     console.log({ message });
 
-    // TODO: SAVE INTO DB=REDIS
+    const { destination, text, source, id } = message;
 
-    await updatedCache(message.channel_id, message.id, JSON.stringify(message));
-    io.emit('message', message);
+    const messages = await getAllMessage({ destination, source });
+
+    // TODO: SAVE INTO DB=REDIS
+    var stmt = db.prepare('INSERT INTO charts VALUES (?,?,?)');
+    stmt.run(source, destination, text);
+    stmt.finalize();
+
+    io.emit('message', messages);
   });
 
   //handle room
