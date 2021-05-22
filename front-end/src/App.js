@@ -4,6 +4,7 @@ import MessagePanel from './components/MessagePanel';
 import { Container, Alert, Row, Col } from 'react-bootstrap';
 
 import { io } from 'socket.io-client';
+import Login from './components/Login';
 
 const newSocket = io('http://localhost:4001', {
   auth: { token: 'tst' },
@@ -16,17 +17,16 @@ function App(props) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    newSocket.on('message', (data) => {
-      console.log({ data });
-      setMessage(data);
-    });
+    // newSocket.on('message', (data) => {
+    //   console.log({ data });
+    // setMessage(data);
+    // });
     getLoggedInUser();
-  }, [message, refresh]);
+  }, [refresh]);
 
   const getLoggedInUser = () => {
     const userId = localStorage.getItem('id');
     setIsLoggedIn(userId);
-    console.log({ userId });
   };
 
   const handleChannelSelect = ({ source, destination }) => {
@@ -39,17 +39,6 @@ function App(props) {
         console.log('channel join => ', data);
         setMessage(data);
       });
-  };
-
-  const handleSendMessage = (destination, text) => {
-    console.log({ destination, text });
-    newSocket.emit('message', {
-      destination,
-      text,
-      source: localStorage.getItem('id'),
-      id: Date.now(),
-    });
-    setRefresh(true);
   };
 
   const handleLogin = (username) => {
@@ -65,7 +54,7 @@ function App(props) {
             isLoggedIn={isLoggedIn}
             message={message}
             handleChannelSelect={handleChannelSelect}
-            handleSendMessage={handleSendMessage}
+            newSocket={newSocket}
           />
         ) : (
           <Login handleLogin={handleLogin} />
@@ -74,26 +63,8 @@ function App(props) {
     </Container>
   );
 }
-const Login = ({ handleLogin }) => {
-  const [username, setUsername] = useState();
 
-  return (
-    <Container>
-      <h1>Login</h1>
-      <div>
-        <input type="text" onChange={(e) => setUsername(e.target.value)} />
-        <button onClick={() => handleLogin(username)}>Login</button>
-      </div>
-    </Container>
-  );
-};
-
-const Chart = ({
-  isLoggedIn,
-  message,
-  handleChannelSelect,
-  handleSendMessage,
-}) => {
+const Chart = ({ isLoggedIn, message, handleChannelSelect, newSocket }) => {
   return (
     <Container>
       <div>
@@ -110,9 +81,9 @@ const Chart = ({
         {message ? (
           <Col sm={9}>
             <MessagePanel
-              handleSendMessage={handleSendMessage}
               message={message}
               source={isLoggedIn}
+              newSocket={newSocket}
             />
           </Col>
         ) : (

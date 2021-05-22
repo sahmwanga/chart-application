@@ -1,19 +1,51 @@
-import React, { useState } from 'react';
-import { Col, Row, Form, InputGroup } from 'react-bootstrap';
+import React, { useState, useEffect } from 'react';
+import { Col, Row, Form, InputGroup, Card } from 'react-bootstrap';
 
-function MessagePanel({ handleSendMessage, message, source }) {
+function MessagePanel({ message, source, newSocket }) {
   const [text, setText] = useState();
+  const [dt, setDt] = useState(message);
+
+  useEffect(() => {
+    newSocket.on('message', (data) => {
+      console.log({ dt: dt });
+      setDt(data);
+    });
+  }, [dt]);
+
+  const handleSendMessage = (destination, text) => {
+    newSocket.emit('message', {
+      destination,
+      text,
+      source: localStorage.getItem('id'),
+      id: Date.now(),
+    });
+  };
+
   return (
     <div>
-      <div>list of message + sender</div>
-      {message.message &&
-        message.message.map((msg) =>
-          msg.source === source ? (
-            <Source msg={msg} />
-          ) : (
-            <Destination msg={msg} />
-          )
-        )}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          paddingBottom: '50px',
+        }}
+      >
+        {dt.message &&
+          dt.message.map((msg) => (
+            <Card
+              style={{
+                width: '40%',
+                margin: '16px 4px 0px 4px',
+                alignSelf: msg.source === source ? 'flex-end' : 'flex-start',
+              }}
+            >
+              <Card.Body>
+                <Card.Title>{msg.source}</Card.Title>
+                <Card.Text>{msg.content}</Card.Text>
+              </Card.Body>
+            </Card>
+          ))}
+      </div>
       <hr />
       <Row>
         <Col>
@@ -40,44 +72,5 @@ function MessagePanel({ handleSendMessage, message, source }) {
     </div>
   );
 }
-
-const Source = ({ msg }) => {
-  return (
-    <div>
-      <div
-        style={{
-          backgroundColor: 'lightskyblue',
-          padding: '5px',
-          margin: '5px',
-          width: '100%',
-          textAlign: 'right',
-        }}
-      >
-        <span>{msg.content}</span>
-        <br />
-        <span>You</span>
-      </div>
-    </div>
-  );
-};
-const Destination = ({ msg }) => {
-  return (
-    <div>
-      <div
-        style={{
-          backgroundColor: 'lightgray',
-          padding: '5px',
-          margin: '5px',
-          width: '100%',
-        }}
-      >
-        <span>{msg.content}</span>
-        <br />
-        <pre>from: {msg.source}</pre>
-      </div>
-      <div style={{ float: 'clear' }}></div>
-    </div>
-  );
-};
 
 export default MessagePanel;
