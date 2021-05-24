@@ -1,7 +1,9 @@
 import axios from 'axios';
 import React, { useEffect, useState } from 'react';
+import { Col } from 'react-bootstrap';
+import { Link } from 'react-router-dom';
 
-function Room({ handleChannelSelect, source }) {
+function Room({ source }) {
   const [channels, setChannels] = useState();
 
   useEffect(() => {
@@ -21,13 +23,10 @@ function Room({ handleChannelSelect, source }) {
   };
 
   return (
-    <div>
+    <Col sm={12} md={4}>
       {channels &&
         channels.map((ch) => (
-          <div
-            onClick={() => handleChannelSelect({ source, destination: ch.id })}
-            key={ch.id}
-          >
+          <Link to={`/${ch.id}`} key={ch.id}>
             <p
               style={{
                 backgroundColor: 'teal',
@@ -36,11 +35,13 @@ function Room({ handleChannelSelect, source }) {
                 cursor: 'pointer',
               }}
             >
-              {ch.name}
+              <pre>
+                {ch.name} - {ch.id}
+              </pre>
             </p>
-          </div>
+          </Link>
         ))}
-    </div>
+    </Col>
   );
 }
 

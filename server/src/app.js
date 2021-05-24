@@ -61,7 +61,7 @@ let interval;
 io.on('connection', (socket) => {
   console.log('New client connected');
 
-  socket.on('channel-join', async ({ source, destination }) => {
+  socket.on('channel-join', async ({ source, destination }, callback) => {
     console.log('channel-join', { source, destination });
 
     // general welcome
@@ -70,29 +70,35 @@ io.on('connection', (socket) => {
     // get all message for the selected channel
     const messages = await getAllMessage({ source, destination });
     // console.log(messages);
-    socket.emit('channel-join', {
+    // socket.emit('channel-join', {
+    socket.emit('message', {
       source,
       destination,
       message: messages,
     });
 
-    // broadcast everytime users connect
-    // socket.broadcast.to(id).emit('message', 'Sahmwanga has joined the room');
+    callback();
   });
 
-  socket.on('message', async (message) => {
-    console.log({ message });
+  socket.on('sendMessage', async (content, callback) => {
+    console.log({ content });
 
-    const { destination, text, source, id } = message;
+    const { destination, message, source, id } = content;
+
+    // TODO: SAVE INTO DB=REDIS
+    var stmt = await db.prepare('INSERT INTO charts VALUES (?,?,?)');
+    stmt.run(source, destination, message);
+    stmt.finalize();
 
     const messages = await getAllMessage({ destination, source });
 
-    // TODO: SAVE INTO DB=REDIS
-    var stmt = db.prepare('INSERT INTO charts VALUES (?,?,?)');
-    stmt.run(source, destination, text);
-    stmt.finalize();
+    io.emit('message', {
+      source,
+      destination,
+      message: messages,
+    });
 
-    io.emit('message', messages);
+    callback();
   });
 
   //handle room

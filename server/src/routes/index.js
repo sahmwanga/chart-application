@@ -6,6 +6,7 @@ router.get('/channels', (req, res) => {
       channels: [
         { id: '255653679553', name: 'Salehe' },
         { id: '255653679550', name: 'Juma' },
+        { id: '255653679551', name: 'Hassani' },
       ],
     })
     .status(200);
